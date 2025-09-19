@@ -16,6 +16,30 @@
       --shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
       --radius:14px;
     }
+      /* RECOMMENDATION BOX CAROUSEL */
+      .recommendation-carousel {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        color: var(--ink);
+        background: #f9fafb;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        padding: 12px;
+        transition: opacity 0.5s;
+        position: relative;
+        min-width: 220px;
+      }
+      .recommendation-carousel a {
+        color: var(--blue-2);
+        text-decoration: underline;
+        font-weight: 600;
+      }
+      .recommendation-carousel[aria-hidden="true"] {
+        opacity: 0.2;
+      }
     *{box-sizing:border-box}
     body{margin:0;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; color:var(--ink); background:var(--page-bg)}
 
@@ -176,7 +200,7 @@
         <div class="card" id="recommendationCard">
           <div class="card-h"><h3>Recommendation</h3><a href="#" class="muted">›</a></div>
           <div class="card-b">
-            <div id="recommendationBox" class="muted">Loading recommendation...</div>
+            <div id="recommendationBox" class="recommendation-carousel">Loading recommendation...</div>
           </div>
         </div>
 
@@ -269,20 +293,90 @@
       $('ccAmt').textContent = amounts.cc.toLocaleString(undefined,{style:'currency',currency:'USD'});
       $('points').textContent = amounts.points.toLocaleString();
 
-      // Recommendation box
-      const userIdMap = {alice: 'user1', bob: 'user2', charlie: 'user3'};
+      // Recommendation box (fetch and roll for Alice, reward on click)
       const recBox = $('recommendationBox');
       if (recBox) {
         if (!u) {
           recBox.textContent = 'Sign in to see your recommendation.';
         } else {
           recBox.textContent = 'Loading recommendation...';
+          const userIdMap = {alice: 'user1', bob: 'user2', charlie: 'user3'};
           fetch(`http://localhost:8000/api/recommendation?user_id=${userIdMap[u.username]}`)
             .then(r => r.json())
             .then(data => {
-              // Replace <link>...</link> with anchor
-              let msg = data.message.replace(/<link>(.*?)<\/link>/, `<a href="${data.url}" target="_blank">$1</a>`);
-              recBox.innerHTML = msg;
+              function sendReward(armId) {
+                fetch('http://localhost:8000/reward', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({arm_id: armId, reward: 1})
+                })
+                .then(() => {
+                  // Fetch updated state for arm
+                  fetch(`http://localhost:8000/state`)
+                    .then(r => r.json())
+                    .then(state => {
+                      const armState = state[armId];
+                      if (armState) {
+                        const feedback = `✅ Feedback recorded! Arm: <b>${armId}</b> | Alpha: <b>${armState.alpha.toFixed(2)}</b> | Beta: <b>${armState.beta.toFixed(2)}</b>`;
+                        recBox.innerHTML += `<div style="margin-top:8px;color:var(--blue-2);font-size:14px">${feedback}</div>`;
+                      }
+                    });
+                });
+              }
+              if (Array.isArray(data.recommendations)) {
+                // Roll through all recommendations for current user
+                const recommendations = data.recommendations.map(rec => {
+                  const headlineMatch = rec.message.match(/^(.*?)<link>/);
+                  const labelMatch = rec.message.match(/<link>(.*?)<\/link>/);
+                  return {
+                    headline: headlineMatch ? headlineMatch[1].trim() : '',
+                    label: labelMatch ? labelMatch[1].trim() : '',
+                    url: rec.url,
+                    arm_id: rec.arm_id
+                  };
+                });
+                let current = 0;
+                function showRec(idx) {
+                  const rec = recommendations[idx];
+                  recBox.innerHTML = `<span>${rec.headline}: <a href="${rec.url}" target="_blank" data-arm="${rec.arm_id}">${rec.label}</a></span>`;
+                  recBox.setAttribute('aria-hidden', 'false');
+                  // Add click handler for reward
+                  const link = recBox.querySelector('a[data-arm]');
+                  if (link) {
+                    link.addEventListener('click', function(e) {
+                      sendReward(rec.arm_id);
+                    });
+                  }
+                }
+                showRec(current);
+                if (!recBox._carouselInterval) {
+                  recBox._carouselInterval = setInterval(() => {
+                    recBox.setAttribute('aria-hidden', 'true');
+                    setTimeout(() => {
+                      current = (current + 1) % recommendations.length;
+                      showRec(current);
+                    }, 500);
+                  }, 3500);
+                }
+              } else if (data.recommendations && data.recommendations.length === 1) {
+                // Single recommendation
+                const rec = data.recommendations[0];
+                let msg = rec.message.replace(/<link>(.*?)<\/link>/, `<a href="${rec.url}" target="_blank" data-arm="${rec.arm_id}">$1</a>`);
+                recBox.innerHTML = msg;
+                // Add click handler for reward
+                const link = recBox.querySelector('a[data-arm]');
+                if (link) {
+                  link.addEventListener('click', function(e) {
+                    sendReward(rec.arm_id);
+                  });
+                }
+              } else if (data.message && data.url) {
+                // Fallback for old API
+                let msg = data.message.replace(/<link>(.*?)<\/link>/, `<a href="${data.url}" target="_blank">$1</a>`);
+                recBox.innerHTML = msg;
+              } else {
+                recBox.textContent = 'No recommendations available.';
+              }
             })
             .catch(() => {
               recBox.textContent = 'Could not load recommendation.';

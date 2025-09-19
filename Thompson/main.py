@@ -19,19 +19,51 @@ app.add_middleware(
 
 
 # --- config -------------------------------------------------------------
-ARM_NAMES = ["headline_A", "headline_B", "headline_C"]   # change at will
+ARM_NAMES = [
+    "headline_A", "headline_B", "headline_C",
+    "headline_D", "headline_E",
+    "headline_F", "headline_G",
+    "headline_H", "headline_I"
+]
 ARM_DESCRIPTIONS = {
+    # Alice (Purchase)
     "headline_A": {
-        "message": "Check today's <link>mortgage rates</link>",
-        "url": "https://www.chase.com/personal/mortgage/mortgage-rates"
+        "message": "Find your dream home with <link>Chase</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase"
     },
+    "headline_D": {
+        "message": "Second home or <link>investment properties</link>",
+        "url": "https://www.chase.com/personal/mortgage/investment-property?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+    },
+    "headline_E": {
+        "message": "First time <link>homebuying</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase/first-time-homebuyer?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+    },
+    # Bob (Refinance)
     "headline_B": {
         "message": "Explore <link>refinancing options</link> for your home",
         "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
     },
+    "headline_F": {
+        "message": "Want to know <link>Mortgage rates?</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-rates?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+    },
+    "headline_G": {
+        "message": "Featured <link>calculators and resources</link>",
+        "url": "https://www.chase.com/personal/mortgage/calculators-resources?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+    },
+    # Charlie (Home Equity)
     "headline_C": {
         "message": "Learn about <link>home equity</link> solutions",
         "url": "https://www.chase.com/personal/home-equity/customer-service"
+    },
+    "headline_H": {
+        "message": "HELOC <link>Pay off your HELOC account</link>",
+        "url": "https://www.chase.com/personal/home-equity/customer-service/info/pay-off-account"
+    },
+    "headline_I": {
+        "message": "HELOC <link>End-of-draw options</link>",
+        "url": "https://www.chase.com/personal/home-equity/customer-service/info/end-of-draw-options"
     }
 }
 bandit = ThompsonBandit(ARM_NAMES)
@@ -55,6 +87,12 @@ def reward(payload: RewardIn):
     if payload.arm_id not in bandit.arms:
         raise HTTPException(status_code=404, detail="Unknown arm")
     bandit.reward(payload.arm_id, payload.reward)
+    # Print arm info after reward update
+    arm_state = bandit.state()[payload.arm_id]
+    print(f"\nReward Updated: {payload.arm_id}", flush=True)
+    print(f"Current Parameters - Alpha: {arm_state['alpha']:.2f}, Beta: {arm_state['beta']:.2f}", flush=True)
+    if arm_state['num_pulls'] > 0:
+        print(f"Average Reward: {arm_state['average_reward']:.3f} (Total Pulls: {arm_state['num_pulls']})", flush=True)
     return {"status": "ok"}
 
 @app.get("/state")
@@ -64,23 +102,28 @@ def state():
 
 @app.get("/api/recommendation")
 def get_recommendation(user_id: str):
-    """Get a recommendation for a specific user."""
+    """Get recommendations for a specific user."""
     # Map user_id to interest
     user_interest_map = {
-        "user1": "headline_A",  # Purchase
-        "user2": "headline_B",  # Refinance
-        "user3": "headline_C"   # Home Equity
+        "user1": ["headline_A", "headline_D", "headline_E"],  # Purchase
+        "user2": ["headline_B", "headline_F", "headline_G"],  # Refinance
+        "user3": ["headline_C", "headline_H", "headline_I"]   # Home Equity
     }
-    arm_id = user_interest_map.get(user_id, bandit.choose())
-    description = ARM_DESCRIPTIONS[arm_id]
-    arm_state = bandit.state()[arm_id]
-    print(f"\nArm Selected: {arm_id}")
-    print(f"Current Parameters - Alpha: {arm_state['alpha']:.2f}, Beta: {arm_state['beta']:.2f}")
-    if arm_state['num_pulls'] > 0:
-        print(f"Average Reward: {arm_state['average_reward']:.3f} (Total Pulls: {arm_state['num_pulls']})")
+    arm_ids = user_interest_map.get(user_id, [bandit.choose()])
+    recommendations = []
+    for arm_id in arm_ids:
+        description = ARM_DESCRIPTIONS[arm_id]
+        arm_state = bandit.state()[arm_id]
+        print(f"\nArm Selected: {arm_id}", flush=True)
+        print(f"Current Parameters - Alpha: {arm_state['alpha']:.2f}, Beta: {arm_state['beta']:.2f}", flush=True)
+        if arm_state['num_pulls'] > 0:
+            print(f"Average Reward: {arm_state['average_reward']:.3f} (Total Pulls: {arm_state['num_pulls']})", flush=True)
+        recommendations.append({
+            "arm_id": arm_id,
+            "message": description["message"],
+            "url": description["url"]
+        })
     return {
         "user_id": user_id,
-        "recommendation": arm_id,
-        "message": description["message"],
-        "url": description["url"]
+        "recommendations": recommendations
     }
