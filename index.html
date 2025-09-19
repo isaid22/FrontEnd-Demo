@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thompson Sampling Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #1e7e34;
+        }
+        
+        .arms-container {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .arm {
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            min-width: 150px;
+            transition: all 0.3s;
+        }
+        
+        .arm.selected {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+            transform: scale(1.05);
+        }
+        
+        .arm h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .arm-stats {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stats-box h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .stats-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .chart-container {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        #rewardChart {
+            width: 100%;
+            height: 300px;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        
+        .explanation {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .explanation h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .explanation p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        @media (max-width: 768px) {
+            .arms-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Thompson Sampling Demo</h1>
+        <p class="subtitle">Multi-Armed Bandit Problem Solver</p>
+        
+        <div class="controls">
+            <button id="startBtn" class="btn-primary">Start Simulation</button>
+            <button id="pauseBtn" class="btn-secondary">Pause</button>
+            <button id="resetBtn" class="btn-secondary">Reset</button>
+            <button id="stepBtn" class="btn-success">Single Step</button>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stats-box">
+                <h3>Total Trials</h3>
+                <div class="stats-value" id="totalTrials">0</div>
+            </div>
+            <div class="stats-box">
+                <h3>Total Reward</h3>
+                <div class="stats-value" id="totalReward">0</div>
+            </div>
+            <div class="stats-box">
+                <h3>Success Rate</h3>
+                <div class="stats-value" id="successRate">0%</div>
+            </div>
+            <div class="stats-box">
+                <h3>Optimal Rate</h3>
+                <div class="stats-value" id="optimalRate">0%</div>
+            </div>
+        </div>
+        
+        <div class="arms-container" id="armsContainer">
+            <!-- Arms will be dynamically generated -->
+        </div>
+        
+        <div class="chart-container">
+            <h3>Cumulative Reward Over Time</h3>
+            <canvas id="rewardChart"></canvas>
+        </div>
+        
+        <div class="explanation">
+            <h3>About Thompson Sampling</h3>
+            <p><strong>Thompson Sampling</strong> is a probabilistic approach to the multi-armed bandit problem. It balances exploration and exploitation by:</p>
+            <p>1. <strong>Modeling each arm</strong> with a Beta distribution based on past successes and failures</p>
+            <p>2. <strong>Sampling</strong> from each arm's distribution to get an expected reward</p>
+            <p>3. <strong>Selecting</strong> the arm with the highest sampled value</p>
+            <p>4. <strong>Updating</strong> the selected arm's distribution based on the observed reward</p>
+            <p>The algorithm naturally explores less promising options early on but converges to exploit the best arm as it gains confidence. Watch how it learns which slot machine (arm) has the highest payout rate!</p>
+        </div>
+    </div>
+
+    <script>
+        class ThompsonSamplingDemo {
+            constructor() {
+                this.arms = [
+                    { name: 'Arm 1', trueRate: 0.1, alpha: 1, beta: 1, selections: 0, rewards: 0 },
+                    { name: 'Arm 2', trueRate: 0.3, alpha: 1, beta: 1, selections: 0, rewards: 0 },
+                    { name: 'Arm 3', trueRate: 0.6, alpha: 1, beta: 1, selections: 0, rewards: 0 },
+                    { name: 'Arm 4', trueRate: 0.2, alpha: 1, beta: 1, selections: 0, rewards: 0 },
+                    { name: 'Arm 5', trueRate: 0.8, alpha: 1, beta: 1, selections: 0, rewards: 0 }
+                ];
+                
+                this.totalTrials = 0;
+                this.totalReward = 0;
+                this.rewardHistory = [];
+                this.isRunning = false;
+                this.intervalId = null;
+                this.selectedArm = null;
+                
+                this.initializeElements();
+                this.initializeChart();
+                this.renderArms();
+                this.updateStats();
+            }
+            
+            initializeElements() {
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.stepBtn = document.getElementById('stepBtn');
+                
+                this.startBtn.addEventListener('click', () => this.start());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                this.stepBtn.addEventListener('click', () => this.step());
+            }
+            
+            initializeChart() {
+                this.canvas = document.getElementById('rewardChart');
+                this.ctx = this.canvas.getContext('2d');
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = 300;
+                this.drawChart();
+            }
+            
+            renderArms() {
+                const container = document.getElementById('armsContainer');
+                container.innerHTML = '';
+                
+                this.arms.forEach((arm, index) => {
+                    const armElement = document.createElement('div');
+                    armElement.className = 'arm';
+                    armElement.id = `arm-${index}`;
+                    
+                    const successRate = arm.selections > 0 ? (arm.rewards / arm.selections * 100).toFixed(1) : 0;
+                    const estimatedRate = arm.alpha > 1 || arm.beta > 1 ? 
+                        ((arm.alpha - 1) / (arm.alpha + arm.beta - 2) * 100).toFixed(1) : 'N/A';
+                    
+                    armElement.innerHTML = `
+                        <h3>${arm.name}</h3>
+                        <div class="arm-stats">
+                            <div>Selections: ${arm.selections}</div>
+                            <div>Rewards: ${arm.rewards}</div>
+                            <div>Success Rate: ${successRate}%</div>
+                            <div>α: ${arm.alpha.toFixed(1)}, β: ${arm.beta.toFixed(1)}</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(armElement);
+                });
+            }
+            
+            betaRandom(alpha, beta) {
+                // Simple beta distribution sampling using transformation method
+                const x = this.gammaRandom(alpha, 1);
+                const y = this.gammaRandom(beta, 1);
+                return x / (x + y);
+            }
+            
+            gammaRandom(shape, scale) {
+                // Marsaglia and Tsang's fast gamma algorithm
+                if (shape < 1) {
+                    return this.gammaRandom(shape + 1, scale) * Math.pow(Math.random(), 1 / shape);
+                }
+                
+                const d = shape - 1/3;
+                const c = 1 / Math.sqrt(9 * d);
+                
+                while (true) {
+                    let x, v;
+                    do {
+                        x = this.normalRandom();
+                        v = 1 + c * x;
+                    } while (v <= 0);
+                    
+                    v = v * v * v;
+                    const u = Math.random();
+                    
+                    if (u < 1 - 0.0331 * x * x * x * x) {
+                        return d * v * scale;
+                    }
+                    
+                    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) {
+                        return d * v * scale;
+                    }
+                }
+            }
+            
+            normalRandom() {
+                // Box-Muller transformation
+                if (this.spare) {
+                    const tmp = this.spare;
+                    this.spare = null;
+                    return tmp;
+                }
+                
+                const u = Math.random();
+                const v = Math.random();
+                const mag = Math.sqrt(-2 * Math.log(u));
+                this.spare = mag * Math.cos(2 * Math.PI * v);
+                return mag * Math.sin(2 * Math.PI * v);
+            }
+            
+            selectArm() {
+                const samples = this.arms.map(arm => this.betaRandom(arm.alpha, arm.beta));
+                return samples.indexOf(Math.max(...samples));
+            }
+            
+            step() {
+                const selectedIndex = this.selectArm();
+                const selectedArm = this.arms[selectedIndex];
+                
+                // Highlight selected arm
+                this.clearArmSelections();
+                document.getElementById(`arm-${selectedIndex}`).classList.add('selected');
+                this.selectedArm = selectedIndex;
+                
+                // Simulate reward based on true rate
+                const reward = Math.random() < selectedArm.trueRate ? 1 : 0;
+                
+                // Update arm statistics
+                selectedArm.selections++;
+                selectedArm.rewards += reward;
+                selectedArm.alpha += reward;
+                selectedArm.beta += (1 - reward);
+                
+                // Update global statistics
+                this.totalTrials++;
+                this.totalReward += reward;
+                this.rewardHistory.push(this.totalReward);
+                
+                // Update display
+                this.renderArms();
+                this.updateStats();
+                this.drawChart();
+                
+                // Auto-pause after 1000 trials
+                if (this.totalTrials >= 1000 && this.isRunning) {
+                    this.pause();
+                }
+            }
+            
+            clearArmSelections() {
+                this.arms.forEach((_, index) => {
+                    document.getElementById(`arm-${index}`).classList.remove('selected');
+                });
+            }
+            
+            start() {
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.intervalId = setInterval(() => this.step(), 100);
+                    this.startBtn.textContent = 'Running...';
+                    this.startBtn.disabled = true;
+                }
+            }
+            
+            pause() {
+                if (this.isRunning) {
+                    this.isRunning = false;
+                    clearInterval(this.intervalId);
+                    this.startBtn.textContent = 'Start Simulation';
+                    this.startBtn.disabled = false;
+                    this.clearArmSelections();
+                }
+            }
+            
+            reset() {
+                this.pause();
+                
+                // Reset arms
+                this.arms.forEach(arm => {
+                    arm.alpha = 1;
+                    arm.beta = 1;
+                    arm.selections = 0;
+                    arm.rewards = 0;
+                });
+                
+                // Reset statistics
+                this.totalTrials = 0;
+                this.totalReward = 0;
+                this.rewardHistory = [];
+                
+                // Update display
+                this.renderArms();
+                this.updateStats();
+                this.drawChart();
+                this.clearArmSelections();
+            }
+            
+            updateStats() {
+                document.getElementById('totalTrials').textContent = this.totalTrials;
+                document.getElementById('totalReward').textContent = this.totalReward;
+                
+                const successRate = this.totalTrials > 0 ? (this.totalReward / this.totalTrials * 100).toFixed(1) : 0;
+                document.getElementById('successRate').textContent = `${successRate}%`;
+                
+                // Calculate optimal rate (percentage of times best arm was selected)
+                const bestArmIndex = this.arms.findIndex(arm => arm.trueRate === Math.max(...this.arms.map(a => a.trueRate)));
+                const optimalSelections = this.arms[bestArmIndex].selections;
+                const optimalRate = this.totalTrials > 0 ? (optimalSelections / this.totalTrials * 100).toFixed(1) : 0;
+                document.getElementById('optimalRate').textContent = `${optimalRate}%`;
+            }
+            
+            drawChart() {
+                const ctx = this.ctx;
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                if (this.rewardHistory.length === 0) return;
+                
+                // Set up chart parameters
+                const padding = 40;
+                const chartWidth = width - 2 * padding;
+                const chartHeight = height - 2 * padding;
+                
+                const maxTrials = Math.max(this.rewardHistory.length, 100);
+                const maxReward = Math.max(...this.rewardHistory, 10);
+                
+                // Draw axes
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, height - padding);
+                ctx.lineTo(width - padding, height - padding);
+                ctx.stroke();
+                
+                // Draw grid lines
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    const y = padding + (chartHeight * i / 10);
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(width - padding, y);
+                    ctx.stroke();
+                }
+                
+                // Draw reward curve
+                if (this.rewardHistory.length > 1) {
+                    ctx.strokeStyle = '#007bff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    
+                    this.rewardHistory.forEach((reward, index) => {
+                        const x = padding + (chartWidth * index / maxTrials);
+                        const y = height - padding - (chartHeight * reward / maxReward);
+                        
+                        if (index === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    });
+                    
+                    ctx.stroke();
+                }
+                
+                // Draw ideal curve (theoretical maximum)
+                const bestRate = Math.max(...this.arms.map(arm => arm.trueRate));
+                ctx.strokeStyle = '#28a745';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(padding, height - padding);
+                const idealEndY = height - padding - (chartHeight * bestRate * maxTrials / maxReward);
+                ctx.lineTo(width - padding, idealEndY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Add labels
+                ctx.fillStyle = '#333';
+                ctx.font = '12px Arial';
+                ctx.fillText('Trials', width / 2 - 15, height - 5);
+                
+                ctx.save();
+                ctx.translate(15, height / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('Cumulative Reward', -50, 0);
+                ctx.restore();
+                
+                // Add legend
+                ctx.fillStyle = '#007bff';
+                ctx.fillRect(width - 150, 20, 15, 3);
+                ctx.fillStyle = '#333';
+                ctx.fillText('Actual', width - 130, 30);
+                
+                ctx.fillStyle = '#28a745';
+                ctx.fillRect(width - 150, 40, 15, 3);
+                ctx.fillStyle = '#333';
+                ctx.fillText('Theoretical Max', width - 130, 50);
+            }
+        }
+        
+        // Initialize the demo when the page loads
+        window.addEventListener('load', () => {
+            new ThompsonSamplingDemo();
+        });
+    </script>
+</body>
+</html>
