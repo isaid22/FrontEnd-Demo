@@ -1,0 +1,23 @@
+{
+    "timestamp": "2025-09-14T21:06:52.499052",
+    "arms": {
+        "headline_A": {
+            "alpha": 6.0,
+            "beta": 2.0,
+            "total_reward": 5.0,
+            "num_pulls": 6
+        },
+        "headline_B": {
+            "alpha": 9.0,
+            "beta": 1.0,
+            "total_reward": 8.0,
+            "num_pulls": 8
+        },
+        "headline_C": {
+            "alpha": 5.0,
+            "beta": 1.0,
+            "total_reward": 4.0,
+            "num_pulls": 4
+        }
+    }
+}

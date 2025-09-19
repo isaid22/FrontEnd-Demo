@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bank Dashboard — Demo (3 Users)</title>
+  <style>
+    :root{
+      --page-bg:#f3f4f6;          /* light gray page */
+      --card:#ffffff;             /* white cards */
+      --muted:#6b7280;           /* gray-500 */
+      --ink:#111827;             /* gray-900 */
+      --border:#e5e7eb;          /* gray-200 */
+      --blue:#0b5cab;            /* header blue */
+      --blue-2:#1a73e8;          /* accent blue */
+      --shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; color:var(--ink); background:var(--page-bg)}
+
+    /* TOP BLUE HEADER */
+    .topbar{position:sticky;top:0;z-index:20;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.15)}
+    .topbar-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:14px 20px}
+    .logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#81c3ff,#e5f0ff);opacity:.95}
+    .brand{font-weight:700;letter-spacing:.2px}
+    .nav{display:flex;gap:18px;margin-left:12px}
+    .nav a{color:#dbeafe;text-decoration:none;font-weight:600;opacity:.9}
+    .nav a.active{color:#fff;border-bottom:2px solid #fff;padding-bottom:6px}
+    .spacer{flex:1}
+    .icon{font-size:18px;opacity:.9}
+    .userchip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);padding:6px 10px;border-radius:999px}
+    .avatar{width:28px;height:28px;border-radius:999px;background:#0b3a73;display:grid;place-items:center;font-weight:800;color:#eaf2ff}
+
+    /* SUB NAV */
+    .subnav{background:#ffffff;border-bottom:1px solid var(--border)}
+    .subnav-inner{max-width:1200px;margin:0 auto;display:flex;gap:16px;align-items:center;padding:10px 20px}
+    .pill{padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;color:#1f2937;text-decoration:none}
+    .pill.active{border-color:#bfdbfe;background:#eff6ff;color:#0b5cab;font-weight:700}
+
+    /* PAGE WRAP */
+    .wrap{max-width:1200px;margin:22px auto 60px;padding:0 20px}
+    h1.title{font-size:28px;margin:0 0 14px}
+
+    /* GRID */
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+    @media (max-width:1000px){.grid{grid-template-columns:1fr}}
+
+    /* CARD */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+    .card-h h3{margin:0;font-size:16px}
+    .card-b{padding:16px}
+    .righty{display:grid;gap:16px}
+
+    /* ACCOUNT SUMMARY STYLES */
+    .balance{display:flex;align-items:flex-end;gap:14px}
+    .amount{font-size:34px;font-weight:800}
+    .muted{color:var(--muted);font-size:12px}
+    .row{display:flex;gap:24px;flex-wrap:wrap;margin-top:10px}
+    .kpi{display:grid;gap:2px}
+
+    .section{margin-bottom:16px}
+
+    .cta{appearance:none;border:1px solid var(--border);padding:8px 12px;border-radius:10px;background:#f9fafb;cursor:pointer;font-weight:600}
+    .cta.primary{background:var(--blue-2);border-color:var(--blue-2);color:#fff}
+    .cta.ghost{background:#fff}
+
+    /* OFFER CARDS */
+    .carousel{display:flex;gap:10px;overflow:auto;padding-bottom:4px}
+    .offer{min-width:120px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .offer .ph{height:70px;background:#eef2ff}
+    .offer .meta{padding:10px}
+
+    /* LOGIN MODAL (reused) */
+    .modal-backdrop{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45)}
+    .modal{width:92%;max-width:420px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+    .modal header{padding:16px 16px 0}
+    .modal .body{padding:16px;display:grid;gap:10px}
+    label{font-size:12px;color:var(--muted)}
+    input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border)}
+    .error{color:#b91c1c;font-size:12px}
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div class="topbar">
+    <div class="topbar-inner">
+  <img src="logo.jpg" alt="Logo" class="logo" style="width:32px;height:32px;border-radius:6px;object-fit:cover;" />
+      <nav class="nav">
+        <a class="active" href="#">Accounts</a>
+        <a href="#">Pay & transfer</a>
+        <a href="#">Plan & track</a>
+        <a href="#">Investments</a>
+        <a href="#">Benefits & travel</a>
+        <a href="#">Security & privacy</a>
+        <a href="#">Explore products</a>
+      </nav>
+      <div class="spacer"></div>
+      <div class="icon" title="Search">🔍</div>
+      <div id="headerUser"></div>
+      <button id="signOutBtn" class="cta ghost" style="margin-left:6px">Sign out</button>
+    </div>
+  </div>
+
+  <!-- SUBNAV -->
+  <div class="subnav">
+    <div class="subnav-inner">
+      <a class="pill active" href="#">Overview</a>
+      <a class="pill" href="#">Statements & documents</a>
+      <a class="pill" href="#">Profile & settings</a>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="wrap">
+    <h1 class="title" id="greeting">Good evening</h1>
+
+    <div class="grid">
+      <!-- LEFT COLUMN -->
+      <div class="lefty">
+        <!-- Bank accounts card -->
+        <div class="card section">
+          <div class="card-h">
+            <h3>Bank accounts</h3>
+            <div style="display:flex;gap:8px"><button class="cta primary">Transfer money</button><button class="cta">More ▾</button></div>
+          </div>
+          <div class="card-b">
+            <div class="balance"><a href="#" style="color:var(--blue-2);font-weight:800;text-decoration:none">TOTAL CHECKING (…3081) →</a></div>
+            <div class="balance" style="margin-top:6px"><div class="amount" id="checkingAmt">$6,673.79</div><div class="muted">Available balance</div></div>
+            <div class="row">
+              <div class="kpi"><strong id="depositAmt">+$4,281.90</strong><span class="muted">Deposits this month</span></div>
+              <div class="kpi"><strong id="withdrawAmt">-$10,070.00</strong><span class="muted">Withdrawals this month</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Credit cards card -->
+        <div class="card section">
+          <div class="card-h">
+            <h3>Credit cards</h3>
+            <div style="display:flex;gap:8px"><button class="cta">Pay card</button><button class="cta">More ▾</button></div>
+          </div>
+          <div class="card-b">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <a href="#" style="color:var(--blue-2);font-weight:700;text-decoration:none">Freedom (…4997) →</a>
+              <span class="muted" style="display:flex;align-items:center;gap:6px">✔ <span>Payment scheduled Sep 19, 2025</span></span>
+            </div>
+            <div class="balance" style="margin-top:6px"><div class="amount" id="ccAmt">$2,076.50</div><div class="muted">Current balance</div></div>
+            <div class="row" style="margin-top:12px">
+              <div class="kpi"><span class="muted">Payment due date</span><strong>Sep 19, 2025</strong></div>
+              <div class="kpi"><span class="muted">Minimum payment due</span><strong>$40.00</strong></div>
+              <div class="kpi"><span class="muted">Last statement balance</span><strong>$1,233.79</strong></div>
+              <div class="kpi"><span class="muted">Available credit</span><strong>$16,923.50</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- External accounts card -->
+        <div class="card section">
+          <div class="card-h"><h3>External accounts</h3></div>
+          <div class="card-b">
+            <div class="muted">Link your external accounts to better organize your money, budget and plan for the future.</div>
+            <button class="cta" style="margin-top:10px">Link account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="righty">
+        <div class="card">
+          <div class="card-h"><h3>Rewards</h3><a href="#" class="muted">›</a></div>
+          <div class="card-b"><div style="font-size:28px;font-weight:800" id="points">157,168</div><div class="muted">Rewards points</div></div>
+        </div>
+
+        <div class="card" id="recommendationCard">
+          <div class="card-h"><h3>Recommendation</h3><a href="#" class="muted">›</a></div>
+          <div class="card-b">
+            <div id="recommendationBox" class="muted">Loading recommendation...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>Offers</h3><span class="muted">138</span></div>
+          <div class="card-b">
+            <div class="carousel">
+              <div id="offersCarousel"></div>
+            </div>
+            <button class="cta primary" style="margin-top:12px;width:100%">See your offers</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN MODAL -->
+  <div class="modal-backdrop" id="loginModal">
+    <div class="modal">
+      <header>
+        <h3>Sign in</h3>
+        <p class="muted" style="font-size:12px">Use a preset or enter username/password.</p>
+      </header>
+      <div class="body">
+        <label for="userPreset">Quick select</label>
+        <select id="userPreset">
+          <option value="">— Select —</option>
+          <option value="alice">Alice (Purchase)</option>
+          <option value="bob">Bob (Refinance)</option>
+          <option value="charlie">Charlie (Home Equity)</option>
+        </select>
+        <label>Username</label>
+        <input id="username" placeholder="e.g. alice" />
+        <label>Password</label>
+        <input id="password" type="password" placeholder="••••••" />
+        <div class="error" id="loginError" role="alert"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+          <button class="cta" id="cancelLogin">Cancel</button>
+          <button class="cta primary" id="submitLogin">Sign In</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // USERS (local-only demo)
+    const USERS={
+      alice:{username:'alice',password:'alice123',name:'Alice Johnson',role:'Purchase',email:'alice@example.com'},
+      bob:{username:'bob',password:'bob123',name:'Bob Smith',role:'Refinance',email:'bob@example.com'},
+      charlie:{username:'charlie',password:'charlie123',name:'Charlie Nguyen',role:'Home Equity',email:'charlie@example.com'}
+    };
+    const LS_KEY='demo.currentUser';
+    const $=id=>document.getElementById(id);
+
+    function initials(name){return (name||'?').split(/\\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();}
+    function getUser(){try{return JSON.parse(localStorage.getItem(LS_KEY))}catch{return null}}
+    function setUser(u){if(u) localStorage.setItem(LS_KEY,JSON.stringify(u)); else localStorage.removeItem(LS_KEY); render();}
+
+    function showLogin(open=true){$('loginModal').style.display=open?'grid':'none'; if(open){$('loginError').textContent='';$('username').value='';$('password').value='';$('userPreset').value='';}}
+
+    function renderHeaderUser(){
+      const user=getUser();
+      const node=document.createElement('div');
+      node.className='userchip';
+      if(user){
+        node.innerHTML=`<div class="avatar">${initials(user.name)}</div><div>${user.name}</div>`;
+      }else{
+        const btn=document.createElement('button');btn.className='cta ghost';btn.textContent='Sign in';btn.onclick=()=>showLogin(true); $('signOutBtn').style.display='none'; return btn;
+      }
+      $('signOutBtn').style.display='inline-flex';
+      return node;
+    }
+
+    function render(){
+      // Header user
+      const hu=$('headerUser'); hu.innerHTML=''; hu.appendChild(renderHeaderUser());
+
+      // Greeting (changes with time and user)
+      const u=getUser();
+      const hour=(new Date()).getHours();
+      const part= hour<12? 'morning' : hour<18? 'afternoon' : 'evening';
+      $('greeting').textContent = u? `Good ${part}, ${u.name.split(' ')[0]}` : `Good ${part}`;
+
+      // Fake numbers per user (deterministic)
+      const seed = u? u.username.length * 137 : 101;
+      const amounts={checking:6673.79 + (seed%37), deposit:4281.90 + (seed%11), withdraw:10070 + (seed%23), cc:2076.50 + (seed%19), points:157168 + (seed%97)};
+      $('checkingAmt').textContent = amounts.checking.toLocaleString(undefined,{style:'currency',currency:'USD'});
+      $('depositAmt').textContent = `+$${amounts.deposit.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      $('withdrawAmt').textContent = `-$${amounts.withdraw.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      $('ccAmt').textContent = amounts.cc.toLocaleString(undefined,{style:'currency',currency:'USD'});
+      $('points').textContent = amounts.points.toLocaleString();
+
+      // Recommendation box
+      const userIdMap = {alice: 'user1', bob: 'user2', charlie: 'user3'};
+      const recBox = $('recommendationBox');
+      if (recBox) {
+        if (!u) {
+          recBox.textContent = 'Sign in to see your recommendation.';
+        } else {
+          recBox.textContent = 'Loading recommendation...';
+          fetch(`http://localhost:8000/api/recommendation?user_id=${userIdMap[u.username]}`)
+            .then(r => r.json())
+            .then(data => {
+              // Replace <link>...</link> with anchor
+              let msg = data.message.replace(/<link>(.*?)<\/link>/, `<a href="${data.url}" target="_blank">$1</a>`);
+              recBox.innerHTML = msg;
+            })
+            .catch(() => {
+              recBox.textContent = 'Could not load recommendation.';
+            });
+        }
+      }
+
+      // Offers box with images and shuffle
+      const offers = [
+        {
+          name: 'Grocer',
+          img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
+          reward: '10% back'
+        },
+        {
+          name: 'Tickets',
+          img: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
+          reward: '5% back'
+        },
+        {
+          name: 'Restaurant',
+          img: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=400&q=80',
+          reward: '10% back'
+        },
+        {
+          name: 'Retail',
+          img: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=400&q=80',
+          reward: '8% back'
+        }
+      ];
+      // Shuffle offers
+      for (let i = offers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [offers[i], offers[j]] = [offers[j], offers[i]];
+      }
+      const offersCarousel = $('offersCarousel');
+      if (offersCarousel) {
+        // Remove any extra wrappers, render only the four offers as direct children
+        offersCarousel.innerHTML = '';
+        offers.forEach(o => {
+          const offerDiv = document.createElement('div');
+          offerDiv.className = 'offer';
+          offerDiv.innerHTML = `
+            <div class="ph"><img src="${o.img}" alt="${o.name}" style="width:100%;height:70px;object-fit:cover;display:block;border-radius:12px 12px 0 0"></div>
+            <div class="meta"><strong>${o.name}</strong><div class="muted">${o.reward}</div></div>
+          `;
+          offersCarousel.appendChild(offerDiv);
+        });
+      }
+    }
+
+    // wire up
+    $('signOutBtn').addEventListener('click',()=>setUser(null));
+    $('userPreset').addEventListener('change', e=>{const v=e.target.value; if(USERS[v]){$('username').value=USERS[v].username; $('password').value=USERS[v].password;}});
+    $('submitLogin').addEventListener('click',()=>{const u=$('username').value.trim(); const p=$('password').value; const user=USERS[u]; if(!user||user.password!==p){$('loginError').textContent='Invalid username or password. Try a preset.'; return;} setUser(user); showLogin(false);});
+    $('cancelLogin').addEventListener('click',()=>showLogin(false));
+
+    window.addEventListener('DOMContentLoaded',()=>{render(); if(!getUser()) showLogin(true);});
+  </script>
+</body>
+</html>

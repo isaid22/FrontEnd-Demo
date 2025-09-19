@@ -1,0 +1,23 @@
+<button id="getBtn">Get recommendation</button>
+<div id="rec"></div>
+
+<script>
+async function getRec(){
+  const res = await fetch("http://localhost:8000/choose");
+  const json = await res.json();
+  document.getElementById("rec").innerText = "Show: " + json.arm_id;
+  // store arm_id so you can report reward later
+  localStorage.setItem("lastArm", json.arm_id);
+}
+document.getElementById("getBtn").onclick = getRec;
+
+// example: user clicks “Buy” → report reward=1
+function reportReward(reward){
+  const arm = localStorage.getItem("lastArm");
+  fetch("http://localhost:8000/reward", {
+    method: "POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({arm_id: arm, reward})
+  });
+}
+</script>
