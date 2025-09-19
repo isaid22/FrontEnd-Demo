@@ -27,3 +27,28 @@ Either way, index.html will be launched as the frontend.
 * Login - Pick one of the users
 
 
+* Check for arm reward update - Go to `Thompson/bandit_backup` directory and run diff between any two `json` files:
+
+```
+diff bandit_state_20250918_222841.json bandit_state_20250918_222902.json
+```
+
+For example: 
+
+```
+<     "timestamp": "2025-09-18T22:28:32.881722",
+---
+>     "timestamp": "2025-09-18T22:28:41.208930",
+53c53
+<             "alpha": 5.0,
+---
+>             "alpha": 6.0,
+55,56c55,56
+<             "total_reward": 4.0,
+<             "num_pulls": 4
+---
+>             "total_reward": 5.0,
+>             "num_pulls": 5
+```
+
+Notice the updated values shown by `diff`.
