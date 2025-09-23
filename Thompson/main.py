@@ -28,41 +28,41 @@ ARM_NAMES = [
 ARM_DESCRIPTIONS = {
     # Alice (Purchase)
     "headline_A": {
-        "message": "Find your dream home with <link>Chase</link>",
+        "message": "Make home ownership a reality for you Find your dream home with <link>Chase</link>",
         "url": "https://www.chase.com/personal/mortgage/mortgage-purchase"
     },
     "headline_D": {
-        "message": "Second home or <link>investment properties</link>",
+        "message": "Thinking of buying another home? Let us help you with your <link>Second home or investment properties</link>",
         "url": "https://www.chase.com/personal/mortgage/investment-property?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
     },
     "headline_E": {
-        "message": "First time <link>homebuying</link>",
+        "message": "Let us help you with your journey of <link>homebuying</link>",
         "url": "https://www.chase.com/personal/mortgage/mortgage-purchase/first-time-homebuyer?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
     },
     # Bob (Refinance)
     "headline_B": {
-        "message": "Explore <link>refinancing options</link> for your home",
+        "message": "Take advantage of current interest rate, explore <link>refinancing options</link> for your home",
         "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
     },
     "headline_F": {
-        "message": "Want to know <link>Mortgage rates?</link>",
+        "message": "Considering refinancing your mortgage? Want to know <link>mrtgage rates?</link>",
         "url": "https://www.chase.com/personal/mortgage/mortgage-rates?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
     },
     "headline_G": {
-        "message": "Featured <link>calculators and resources</link>",
+        "message": "Check out these resources to enable your journey. Featured <link>calculators and resources</link>",
         "url": "https://www.chase.com/personal/mortgage/calculators-resources?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
     },
     # Charlie (Home Equity)
     "headline_C": {
-        "message": "Learn about <link>home equity</link> solutions",
+        "message": "Curious about how to let your home equity work for you? Learn about <link>home equity</link> solutions",
         "url": "https://www.chase.com/personal/home-equity/customer-service"
     },
     "headline_H": {
-        "message": "HELOC <link>Pay off your HELOC account</link>",
+        "message": "Know your equity, are you ready to pay it off?  <link>Pay off your HELOC account</link>",
         "url": "https://www.chase.com/personal/home-equity/customer-service/info/pay-off-account"
     },
     "headline_I": {
-        "message": "HELOC <link>End-of-draw options</link>",
+        "message": "Understanding your options in Home Equity Line of Credit (HELOC) <link>End-of-draw options</link>",
         "url": "https://www.chase.com/personal/home-equity/customer-service/info/end-of-draw-options"
     }
 }
