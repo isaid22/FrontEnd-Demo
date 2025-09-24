@@ -7,6 +7,8 @@ import time
 import pandas as pd 
 
 def generate_meassages(user_data):
+    from datetime import datetime
+    print(f'##### Function called at: {datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")}')
 
     bedrock_runtime_client = boto3.client(
         service_name="bedrock-runtime",
@@ -23,9 +25,14 @@ def generate_meassages(user_data):
 
     model_id = 'amazon.nova-micro-v1:0'
     system_prompt = "You are an expert in encouraging banking customer to engage with either home mortgage purchase, refinancing or home equity loan. I need you to come up with ten brief and powerful messages, each message has at least ten and most thirty words, and be creative for every time you are being called via API, do not use save verbiage each time. Do not make any offers or mention anything numeric, such as years, terms, interest rates, fees."
+    
+    # Add timestamp to force unique requests
+    import uuid
+    unique_id = str(uuid.uuid4())[:8]
     user_message = (
         f"This message is for user that is interested in {cluster_type}. "
         f"Reasoning: {reasoning}. "
+        f"Request ID: {unique_id} - Generate fresh, unique messages."
     )
     print('##### User Message: ', user_message, '\n')
 
@@ -67,5 +74,8 @@ Return the output as a JSON array of strings, with each string containing one me
     messages_json_str = response['output']['message']['content'][0]['text'] 
     messages_list = json.loads(messages_json_str) 
 
-    print('##### Messages List: ', messages_list[:3], '\n') 
+    print('##### Messages List: ')
+    for i, message in enumerate(messages_list, 1):
+        print(f'{i:2d}. {message}')
+    print()
     return messages_list

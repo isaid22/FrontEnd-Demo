@@ -20,50 +20,141 @@ app.add_middleware(
 
 # --- config -------------------------------------------------------------
 ARM_NAMES = [
-    "headline_A", "headline_B", "headline_C",
-    "headline_D", "headline_E",
-    "headline_F", "headline_G",
-    "headline_H", "headline_I"
+    # Purchase Mortgage (10 arms)
+    "purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5",
+    "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10",
+    # Refinance (10 arms)
+    "refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
+    "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10",
+    # Home Equity (10 arms)
+    "home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
+    "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"
 ]
 ARM_DESCRIPTIONS = {
-    # Alice (Purchase)
-    "headline_A": {
+    # Purchase Mortgage (10 arms)
+    "purchase_1": {
         "message": "Make home ownership a reality for you Find your dream home with <link>Chase</link>",
         "url": "https://www.chase.com/personal/mortgage/mortgage-purchase"
     },
-    "headline_D": {
+    "purchase_2": {
         "message": "Thinking of buying another home? Let us help you with your <link>Second home or investment properties</link>",
-        "url": "https://www.chase.com/personal/mortgage/investment-property?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+        "url": "https://www.chase.com/personal/mortgage/investment-property"
     },
-    "headline_E": {
+    "purchase_3": {
         "message": "Let us help you with your journey of <link>homebuying</link>",
-        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase/first-time-homebuyer?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase/first-time-homebuyer"
     },
-    # Bob (Refinance)
-    "headline_B": {
+    "purchase_4": {
+        "message": "Explore your mortgage options with <link>Chase Home Lending</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase"
+    },
+    "purchase_5": {
+        "message": "Get pre-approved for your <link>home purchase</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase"
+    },
+    "purchase_6": {
+        "message": "Find the right <link>mortgage rate</link> for your home purchase",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-rates"
+    },
+    "purchase_7": {
+        "message": "Calculate your mortgage payments with our <link>calculator</link>",
+        "url": "https://www.chase.com/personal/mortgage/calculators-resources"
+    },
+    "purchase_8": {
+        "message": "Learn about <link>down payment assistance</link> programs",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase/first-time-homebuyer"
+    },
+    "purchase_9": {
+        "message": "Discover <link>jumbo mortgage</link> options for luxury homes",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase"
+    },
+    "purchase_10": {
+        "message": "Get started with your <link>home buying journey</link> today",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-purchase"
+    },
+    
+    # Refinance (10 arms)
+    "refinance_1": {
         "message": "Take advantage of current interest rate, explore <link>refinancing options</link> for your home",
         "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
     },
-    "headline_F": {
-        "message": "Considering refinancing your mortgage? Want to know <link>mrtgage rates?</link>",
-        "url": "https://www.chase.com/personal/mortgage/mortgage-rates?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+    "refinance_2": {
+        "message": "Considering refinancing your mortgage? Want to know <link>mortgage rates?</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-rates"
     },
-    "headline_G": {
+    "refinance_3": {
         "message": "Check out these resources to enable your journey. Featured <link>calculators and resources</link>",
-        "url": "https://www.chase.com/personal/mortgage/calculators-resources?gclid=EAIaIQobChMIv9umnefjjwMV3F1_AB0xliq2EAAYASAAEgJLovD_BwE"
+        "url": "https://www.chase.com/personal/mortgage/calculators-resources"
     },
-    # Charlie (Home Equity)
-    "headline_C": {
+    "refinance_4": {
+        "message": "Lower your monthly payments with <link>refinancing</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
+    },
+    "refinance_5": {
+        "message": "Cash-out refinancing for <link>home improvements</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
+    },
+    "refinance_6": {
+        "message": "Switch to a <link>fixed-rate mortgage</link> for stability",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
+    },
+    "refinance_7": {
+        "message": "Reduce your loan term with <link>refinancing</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
+    },
+    "refinance_8": {
+        "message": "Get a free <link>refinance consultation</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
+    },
+    "refinance_9": {
+        "message": "Compare current <link>refinance rates</link>",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-rates"
+    },
+    "refinance_10": {
+        "message": "Start your <link>refinance application</link> online",
+        "url": "https://www.chase.com/personal/mortgage/mortgage-refinance"
+    },
+    
+    # Home Equity (10 arms)
+    "home_equity_1": {
         "message": "Curious about how to let your home equity work for you? Learn about <link>home equity</link> solutions",
         "url": "https://www.chase.com/personal/home-equity/customer-service"
     },
-    "headline_H": {
-        "message": "Know your equity, are you ready to pay it off?  <link>Pay off your HELOC account</link>",
+    "home_equity_2": {
+        "message": "Know your equity, are you ready to pay it off? <link>Pay off your HELOC account</link>",
         "url": "https://www.chase.com/personal/home-equity/customer-service/info/pay-off-account"
     },
-    "headline_I": {
+    "home_equity_3": {
         "message": "Understanding your options in Home Equity Line of Credit (HELOC) <link>End-of-draw options</link>",
         "url": "https://www.chase.com/personal/home-equity/customer-service/info/end-of-draw-options"
+    },
+    "home_equity_4": {
+        "message": "Access your home's equity with a <link>HELOC</link>",
+        "url": "https://www.chase.com/personal/home-equity"
+    },
+    "home_equity_5": {
+        "message": "Fund home improvements with <link>home equity loans</link>",
+        "url": "https://www.chase.com/personal/home-equity"
+    },
+    "home_equity_6": {
+        "message": "Compare <link>home equity rates</link> and terms",
+        "url": "https://www.chase.com/personal/home-equity"
+    },
+    "home_equity_7": {
+        "message": "Use your equity for <link>debt consolidation</link>",
+        "url": "https://www.chase.com/personal/home-equity"
+    },
+    "home_equity_8": {
+        "message": "Calculate your available <link>home equity</link>",
+        "url": "https://www.chase.com/personal/home-equity"
+    },
+    "home_equity_9": {
+        "message": "Apply online for a <link>home equity line of credit</link>",
+        "url": "https://www.chase.com/personal/home-equity"
+    },
+    "home_equity_10": {
+        "message": "Learn about <link>home equity loan</link> vs HELOC options",
+        "url": "https://www.chase.com/personal/home-equity"
     }
 }
 bandit = ThompsonBandit(ARM_NAMES)
@@ -117,7 +208,7 @@ def get_recommendation(user_id: str):
             "reasoning": "Recommended based on existing mortgage indicates refinance potential " 
         },
         "user3": {
-            "cluster_type": "home equity loan",
+            "cluster_type": "HELOC",
             "reasoning": "Recommended based on home equity available for borrowing" 
         }
     }
@@ -138,24 +229,42 @@ def get_recommendation(user_id: str):
 
     cluster_type = user_data["user_login"][0]["cluster_type"]
     bedrock_messages_list = generate_meassages(user_data)
-    print("Bedrock Messages List:", bedrock_messages_list)
+    print("Bedrock Messages List from main.py:")
+    for i, message in enumerate(bedrock_messages_list, 1):
+        print(f'{i:2d}. {message}', flush=True)
+    print()
 
     cluster_headline_map = {
-        "Purchase Mortgage": ["headline_A", "headline_D", "headline_E"],
-        "Refinance": ["headline_B", "headline_F", "headline_G"],
-        "HELOC": ["headline_C", "headline_H", "headline_I"]
+        "Purchase Mortgage": ["purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5", 
+                             "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],
+        "Refinance": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
+                      "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],
+        "HELOC": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
+                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"]
     }
 
-    # Assign generated messages tothe correct headlines
-    if cluster_type in cluster_headline_map and len(bedrock_messages_list) >= 3:
+    # Assign generated messages to the correct headlines
+    print(f"DEBUG: cluster_type = '{cluster_type}'")
+    print(f"DEBUG: len(bedrock_messages_list) = {len(bedrock_messages_list)}")
+    print(f"DEBUG: cluster_type in cluster_headline_map = {cluster_type in cluster_headline_map}")
+    
+    if cluster_type in cluster_headline_map and len(bedrock_messages_list) >= 10:
+        print(f"DEBUG: Assigning messages to {len(cluster_headline_map[cluster_type])} arms")
         for i, headline_id in enumerate(cluster_headline_map[cluster_type]):
+            print(f"DEBUG: Assigning message {i+1} to {headline_id}")
             ARM_DESCRIPTIONS[headline_id]["message"] = bedrock_messages_list[i]
+        print("DEBUG: Message assignment completed!")
+    else:
+        print("DEBUG: Condition failed - using hardcoded messages!")
 
     # Map user_id to interest
     user_interest_map = {
-        "user1": ["headline_A", "headline_D", "headline_E"],  # Purchase
-        "user2": ["headline_B", "headline_F", "headline_G"],  # Refinance
-        "user3": ["headline_C", "headline_H", "headline_I"]   # Home Equity
+        "user1": ["purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5", 
+                  "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],  # Purchase
+        "user2": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
+                  "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],  # Refinance
+        "user3": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
+                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"]   # Home Equity
     }
     arm_ids = user_interest_map.get(user_id, [bandit.choose()])
     
