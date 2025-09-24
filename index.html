@@ -304,6 +304,7 @@
           fetch(`http://localhost:8000/api/recommendation?user_id=${userIdMap[u.username]}`)
             .then(r => r.json())
             .then(data => {
+              console.log("API data:", data)
               function sendReward(armId) {
                 fetch('http://localhost:8000/reward', {
                   method: 'POST',
@@ -326,11 +327,9 @@
               if (Array.isArray(data.recommendations)) {
                 // Roll through all recommendations for current user
                 const recommendations = data.recommendations.map(rec => {
-                  const headlineMatch = rec.message.match(/^(.*?)<link>/);
-                  const labelMatch = rec.message.match(/<link>(.*?)<\/link>/);
                   return {
-                    headline: headlineMatch ? headlineMatch[1].trim() : '',
-                    label: labelMatch ? labelMatch[1].trim() : '',
+                    headline: rec.message, // Use the whole message
+                    label: 'Learn more',
                     url: rec.url,
                     arm_id: rec.arm_id
                   };
@@ -356,7 +355,7 @@
                       current = (current + 1) % recommendations.length;
                       showRec(current);
                     }, 500);
-                  }, 3500);
+                  }, 5000);
                 }
               } else if (data.recommendations && data.recommendations.length === 1) {
                 // Single recommendation

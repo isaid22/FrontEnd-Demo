@@ -103,6 +103,54 @@ def state():
 @app.get("/api/recommendation")
 def get_recommendation(user_id: str):
     """Get recommendations for a specific user."""
+    recommendations = []
+    # Add call to Bedrock to generate more messages
+    from bedrock_access import generate_meassages
+
+    user_profile_map = {
+        "user1": {
+            "cluster_type": "Purchase Mortgage",
+            "reasoning": "Recommended based onL high purchase page engagement(1.00), strong buying power (%511,045)" 
+        },
+        "user2": {
+            "cluster_type": "Refinance",
+            "reasoning": "Recommended based on existing mortgage indicates refinance potential " 
+        },
+        "user3": {
+            "cluster_type": "home equity loan",
+            "reasoning": "Recommended based on home equity available for borrowing" 
+        }
+    }
+
+    profile = user_profile_map.get(user_id, {
+        "cluster_type": "Purchase Mortgage",
+        "reasoning": "Recommended based onL high purchase page engagement(1.00), strong buying power (%511,045)" 
+    }) # if user_id is not found, then default to user1 profile
+
+    user_data = {
+        "user_login": [
+            {
+                "cluster_type": profile["cluster_type"],
+                "reasoning": profile["reasoning"]
+            }
+        ]
+    }
+
+    cluster_type = user_data["user_login"][0]["cluster_type"]
+    bedrock_messages_list = generate_meassages(user_data)
+    print("Bedrock Messages List:", bedrock_messages_list)
+
+    cluster_headline_map = {
+        "Purchase Mortgage": ["headline_A", "headline_D", "headline_E"],
+        "Refinance": ["headline_B", "headline_F", "headline_G"],
+        "HELOC": ["headline_C", "headline_H", "headline_I"]
+    }
+
+    # Assign generated messages tothe correct headlines
+    if cluster_type in cluster_headline_map and len(bedrock_messages_list) >= 3:
+        for i, headline_id in enumerate(cluster_headline_map[cluster_type]):
+            ARM_DESCRIPTIONS[headline_id]["message"] = bedrock_messages_list[i]
+
     # Map user_id to interest
     user_interest_map = {
         "user1": ["headline_A", "headline_D", "headline_E"],  # Purchase
@@ -110,7 +158,7 @@ def get_recommendation(user_id: str):
         "user3": ["headline_C", "headline_H", "headline_I"]   # Home Equity
     }
     arm_ids = user_interest_map.get(user_id, [bandit.choose()])
-    recommendations = []
+    
     for arm_id in arm_ids:
         description = ARM_DESCRIPTIONS[arm_id]
         arm_state = bandit.state()[arm_id]
@@ -123,6 +171,11 @@ def get_recommendation(user_id: str):
             "message": description["message"],
             "url": description["url"]
         })
+
+    print(f"\nFinal Recommendations for {user_id}:", recommendations, flush=True)
+    for recommendation in recommendations:
+        print(f"- {recommendation['arm_id']}: {recommendation['message']} ({recommendation['url']})", flush=True)
+
     return {
         "user_id": user_id,
         "recommendations": recommendations
