@@ -337,7 +337,7 @@
                 let current = 0;
                 function showRec(idx) {
                   const rec = recommendations[idx];
-                  recBox.innerHTML = `<span>${rec.headline}: <a href="${rec.url}" target="_blank" data-arm="${rec.arm_id}">${rec.label}</a></span>`;
+                  recBox.innerHTML = `<span>${rec.headline} <a href="${rec.url}" target="_blank" data-arm="${rec.arm_id}">${rec.label}</a></span>`;
                   recBox.setAttribute('aria-hidden', 'false');
                   // Add click handler for reward
                   const link = recBox.querySelector('a[data-arm]');
