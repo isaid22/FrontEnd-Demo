@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel
 from bandit import ThompsonBandit
+from bedrock_access import generate_meassages, get_embeddings_batch
+from ranker import rank_by_cosine
 
 
 app = FastAPI(title="Thompson-Bandit",default_response_class=ORJSONResponse,  version="0.1.0")
@@ -228,31 +230,74 @@ def get_recommendation(user_id: str):
     }
 
     cluster_type = user_data["user_login"][0]["cluster_type"]
-    bedrock_messages_list = generate_meassages(user_data)
+    if cluster_type == "HELOC":
+        cluster_type = "Home Equity Line of Credit" 
+    reasoning = user_data["user_login"][0]["reasoning"]
+
+    # generate user_data
+
+    # import uuid
+    # unique_id = str(uuid.uuid4())[:8]
+    user_message = (
+        f"This message is for user that is interested in {cluster_type}. "
+        f"Reasoning: {reasoning}. "
+        #f"Request ID: {unique_id} - Generate fresh, unique messages."
+    )
+    
+    print("### USER_MESSAGE and TYPE in main.py:", user_message, type(user_message))
+
+    bedrock_messages_list = generate_meassages(user_data, user_message)
     print("Bedrock Messages List from main.py:")
     for i, message in enumerate(bedrock_messages_list, 1):
         print(f'{i:2d}. {message}', flush=True)
     print()
+
+    # Get embedding vector list
+    text_list = [user_message] + bedrock_messages_list # First item is user_message, rest are generated message
+    vecs = get_embeddings_batch(text_list, model_id="amazon.titan-embed-text-v1", dimensions=1536)
+
+    print(f"##### Batch count: {len(vecs)}")
+    print(f"##### Batch lens: {[len(v) for v in vecs]}")
+
+    
+    # Rank the message based on their similarity with user_message 
+    # Cosine similarity ranking: use the first vector (concatenated prompt) as reference
+    ref_vec = vecs[0]
+    cand_vecs = vecs[1:]
+    ranked_bedrock_messages_list = rank_by_cosine(ref_vec, cand_vecs, bedrock_messages_list)
+
+    # Print all ranked messages with their cosine similarity scores in descending order
+    print("=== RANKED MESSAGES BY COSINE SIMILARITY (Descending Order) ===")
+    for i, item in enumerate(ranked_bedrock_messages_list, 1):
+        print(f"{i:2d}. Similarity: {item['cosine_similarity']:.4f} | Message: {item['message']}")
+    print("=" * 60)
+
+
+
 
     cluster_headline_map = {
         "Purchase Mortgage": ["purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5", 
                              "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],
         "Refinance": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
                       "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],
-        "HELOC": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
+        "Home Equity Line of Credit": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
                   "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"]
     }
 
     # Assign generated messages to the correct headlines
     print(f"DEBUG: cluster_type = '{cluster_type}'")
-    print(f"DEBUG: len(bedrock_messages_list) = {len(bedrock_messages_list)}")
+    print(f"DEBUG: len(ranked_bedrock_messages_list) = {len(ranked_bedrock_messages_list)}")
     print(f"DEBUG: cluster_type in cluster_headline_map = {cluster_type in cluster_headline_map}")
     
-    if cluster_type in cluster_headline_map and len(bedrock_messages_list) >= 10:
+    if cluster_type in cluster_headline_map and len(ranked_bedrock_messages_list) >= 10:
         print(f"DEBUG: Assigning messages to {len(cluster_headline_map[cluster_type])} arms")
         for i, headline_id in enumerate(cluster_headline_map[cluster_type]):
-            print(f"DEBUG: Assigning message {i+1} to {headline_id}")
-            ARM_DESCRIPTIONS[headline_id]["message"] = bedrock_messages_list[i]
+            similarity_score = ranked_bedrock_messages_list[i]["cosine_similarity"]
+            message = ranked_bedrock_messages_list[i]["message"]
+            print(f"DEBUG: Assigning message {i+1} to {headline_id} - Similarity to user description: {similarity_score:.4f}, Message content: {message[:50]}...")
+
+            # Use the ranked message instead of the original order
+            ARM_DESCRIPTIONS[headline_id]["message"] = message
         print("DEBUG: Message assignment completed!")
     else:
         print("DEBUG: Condition failed - using hardcoded messages!")
