@@ -30,7 +30,10 @@ ARM_NAMES = [
     "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10",
     # Home Equity (10 arms)
     "home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
-    "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"
+    "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10",
+    # Early Explorer (10 arms)
+    "early_explorer_1", "early_explorer_2", "early_explorer_3", "early_explorer_4", "early_explorer_5",
+    "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"
 ]
 ARM_DESCRIPTIONS = {
     # Purchase Mortgage (10 arms)
@@ -157,6 +160,48 @@ ARM_DESCRIPTIONS = {
     "home_equity_10": {
         "message": "Learn about <link>home equity loan</link> vs HELOC options",
         "url": "https://www.chase.com/personal/home-equity"
+    },
+    
+    # Early Explorer (10 arms)
+    "early_explorer_1": {
+        "message": "Turn your dreams into reality with <link>homeownership</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_2": {
+        "message": "Build equity and stability through <link>owning your home</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_3": {
+        "message": "Discover the financial benefits of <link>homeownership</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_4": {
+        "message": "Stop paying rent and start building wealth through <link>home ownership</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_5": {
+        "message": "Create a foundation for your future with <link>your own home</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_6": {
+        "message": "Explore the pride and security of <link>owning your home</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_7": {
+        "message": "Take the first step towards <link>homeownership</link> today",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_8": {
+        "message": "Invest in your future with the stability of <link>home ownership</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_9": {
+        "message": "Experience the freedom and control of <link>owning your home</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
+    },
+    "early_explorer_10": {
+        "message": "Make memories in a place you can truly call <link>your own</link>",
+        "url": "https://www.chase.com/personal/mortgage/education"
     }
 }
 bandit = ThompsonBandit(ARM_NAMES)
@@ -212,6 +257,10 @@ def get_recommendation(user_id: str):
         "user3": {
             "cluster_type": "HELOC",
             "reasoning": "Recommended based on home equity available for borrowing" 
+        },
+        "user4": {
+            "cluster_type": "Early Explorer",
+            "reasoning": "Recommended based on interest in exploring homeownership opportunities" 
         }
     }
 
@@ -281,7 +330,9 @@ def get_recommendation(user_id: str):
         "Refinance": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
                       "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],
         "Home Equity Line of Credit": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
-                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"]
+                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"],
+        "Early Explorer": ["early_explorer_1", "early_explorer_2", "early_explorer_3", "early_explorer_4", "early_explorer_5",
+                          "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"]
     }
 
     # Assign generated messages to the correct headlines
@@ -309,7 +360,9 @@ def get_recommendation(user_id: str):
         "user2": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
                   "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],  # Refinance
         "user3": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
-                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"]   # Home Equity
+                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"],   # Home Equity
+        "user4": ["early_explorer_1", "early_explorer_2", "early_explorer_3", "early_explorer_4", "early_explorer_5",
+                  "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"]   # Early Explorer
     }
     arm_ids = user_interest_map.get(user_id, [bandit.choose()])
     

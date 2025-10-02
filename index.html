@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bank Dashboard — Demo (3 Users)</title>
+  <title>Bank Dashboard — Demo (4 Users)</title>
   <style>
     :root{
       --page-bg:#f3f4f6;          /* light gray page */
@@ -231,6 +231,7 @@
           <option value="alice">Alice </option>
           <option value="bob">Bob </option>
           <option value="charlie">Charlie </option>
+          <option value="diana">Diana </option>
         </select>
         <label>Username</label>
         <input id="username" placeholder="e.g. alice" />
@@ -250,7 +251,8 @@
     const USERS={
       alice:{username:'alice',password:'alice123',name:'Alice Johnson',role:'Purchase',email:'alice@example.com'},
       bob:{username:'bob',password:'bob123',name:'Bob Smith',role:'Refinance',email:'bob@example.com'},
-      charlie:{username:'charlie',password:'charlie123',name:'Charlie Nguyen',role:'Home Equity',email:'charlie@example.com'}
+      charlie:{username:'charlie',password:'charlie123',name:'Charlie Nguyen',role:'Home Equity',email:'charlie@example.com'},
+      diana:{username:'diana',password:'diana123',name:'Diana Williams',role:'Early Explorer',email:'diana@example.com'}
     };
     const LS_KEY='demo.currentUser';
     const $=id=>document.getElementById(id);
@@ -300,7 +302,7 @@
           recBox.textContent = 'Sign in to see your recommendation.';
         } else {
           recBox.textContent = 'Loading recommendation...';
-          const userIdMap = {alice: 'user1', bob: 'user2', charlie: 'user3'};
+          const userIdMap = {alice: 'user1', bob: 'user2', charlie: 'user3', diana: 'user4'};
           fetch(`http://localhost:8000/api/recommendation?user_id=${userIdMap[u.username]}`)
             .then(r => r.json())
             .then(data => {
