@@ -303,85 +303,126 @@
         } else {
           recBox.textContent = 'Loading recommendation...';
           const userIdMap = {alice: 'user1', bob: 'user2', charlie: 'user3', diana: 'user4'};
-          fetch(`http://localhost:8000/api/recommendation?user_id=${userIdMap[u.username]}`)
+          const userId = userIdMap[u.username];
+          
+          // Clear any existing intervals
+          if (recBox._carouselInterval) {
+            clearInterval(recBox._carouselInterval);
+            recBox._carouselInterval = null;
+          }
+          
+          // First, get immediate default recommendations
+          fetch(`http://localhost:8000/api/recommendation/immediate?user_id=${userId}`)
             .then(r => r.json())
             .then(data => {
-              console.log("API data:", data)
-              function sendReward(armId) {
-                fetch('http://localhost:8000/reward', {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({arm_id: armId, reward: 1})
-                })
-                .then(() => {
-                  // Fetch updated state for arm
-                  fetch(`http://localhost:8000/state`)
-                    .then(r => r.json())
-                    .then(state => {
-                      const armState = state[armId];
-                      if (armState) {
-                        const feedback = `✅ Feedback recorded! Arm: <b>${armId}</b> | Alpha: <b>${armState.alpha.toFixed(2)}</b> | Beta: <b>${armState.beta.toFixed(2)}</b>`;
-                        recBox.innerHTML += `<div style="margin-top:8px;color:var(--blue-2);font-size:14px">${feedback}</div>`;
-                      }
-                    });
-                });
-              }
-              if (Array.isArray(data.recommendations)) {
-                // Roll through all recommendations for current user
-                const recommendations = data.recommendations.map(rec => {
-                  return {
-                    headline: rec.message, // Use the whole message
-                    label: 'Learn more',
-                    url: rec.url,
-                    arm_id: rec.arm_id
-                  };
-                });
-                let current = 0;
-                function showRec(idx) {
-                  const rec = recommendations[idx];
-                  recBox.innerHTML = `<span>${rec.headline} <a href="${rec.url}" target="_blank" data-arm="${rec.arm_id}">${rec.label}</a></span>`;
-                  recBox.setAttribute('aria-hidden', 'false');
-                  // Add click handler for reward
-                  const link = recBox.querySelector('a[data-arm]');
-                  if (link) {
-                    link.addEventListener('click', function(e) {
-                      sendReward(rec.arm_id);
-                    });
-                  }
-                }
-                showRec(current);
-                if (!recBox._carouselInterval) {
-                  recBox._carouselInterval = setInterval(() => {
-                    recBox.setAttribute('aria-hidden', 'true');
-                    setTimeout(() => {
-                      current = (current + 1) % recommendations.length;
-                      showRec(current);
-                    }, 500);
-                  }, 5000);
-                }
-              } else if (data.recommendations && data.recommendations.length === 1) {
-                // Single recommendation
-                const rec = data.recommendations[0];
-                let msg = rec.message.replace(/<link>(.*?)<\/link>/, `<a href="${rec.url}" target="_blank" data-arm="${rec.arm_id}">$1</a>`);
-                recBox.innerHTML = msg;
-                // Add click handler for reward
-                const link = recBox.querySelector('a[data-arm]');
-                if (link) {
-                  link.addEventListener('click', function(e) {
-                    sendReward(rec.arm_id);
-                  });
-                }
-              } else if (data.message && data.url) {
-                // Fallback for old API
-                let msg = data.message.replace(/<link>(.*?)<\/link>/, `<a href="${data.url}" target="_blank">$1</a>`);
-                recBox.innerHTML = msg;
-              } else {
-                recBox.textContent = 'No recommendations available.';
-              }
+              console.log("Immediate API data:", data);
+              displayRecommendations(data, recBox);
+              
+              // Always start polling since we now always trigger fresh processing
+              console.log("Starting polling for fresh processed results");
+              pollForProcessedResults(userId, recBox);
             })
             .catch(() => {
               recBox.textContent = 'Could not load recommendation.';
             });
+        }
+      }
+      
+      function pollForProcessedResults(userId, recBox) {
+        const pollInterval = setInterval(() => {
+          fetch(`http://localhost:8000/api/recommendation/status?user_id=${userId}`)
+            .then(r => r.json())
+            .then(statusData => {
+              console.log("Status check:", statusData);
+              if (statusData.status && statusData.status.status === 'complete') {
+                clearInterval(pollInterval);
+                // Get processed recommendations
+                fetch(`http://localhost:8000/api/recommendation/processed?user_id=${userId}`)
+                  .then(r => r.json())
+                  .then(processedData => {
+                    console.log("Processed API data:", processedData);
+                    // Clear existing carousel and display new processed data
+                    if (recBox._carouselInterval) {
+                      clearInterval(recBox._carouselInterval);
+                      recBox._carouselInterval = null;
+                    }
+                    displayRecommendations(processedData, recBox);
+                  })
+                  .catch(err => console.error("Error fetching processed data:", err));
+              } else if (statusData.status && statusData.status.status === 'error') {
+                clearInterval(pollInterval);
+                console.error("Background processing failed:", statusData.status.error);
+              }
+            })
+            .catch(err => {
+              console.error("Error checking status:", err);
+              clearInterval(pollInterval);
+            });
+        }, 1000); // Poll every 1 second for faster response
+        
+        // Stop polling after 15 seconds (should be more than enough for 7-second latency)
+        setTimeout(() => {
+          clearInterval(pollInterval);
+        }, 15000);
+      }
+      
+      function displayRecommendations(data, recBox) {
+        function sendReward(armId) {
+          fetch('http://localhost:8000/reward', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({arm_id: armId, reward: 1})
+          })
+          .then(() => {
+            // Fetch updated state for arm
+            fetch(`http://localhost:8000/state`)
+              .then(r => r.json())
+              .then(state => {
+                const armState = state[armId];
+                if (armState) {
+                  const feedback = `✅ Feedback recorded! Arm: <b>${armId}</b> | Alpha: <b>${armState.alpha.toFixed(2)}</b> | Beta: <b>${armState.beta.toFixed(2)}</b>`;
+                  recBox.innerHTML += `<div style="margin-top:8px;color:var(--blue-2);font-size:14px">${feedback}</div>`;
+                }
+              });
+          });
+        }
+        
+        if (Array.isArray(data.recommendations)) {
+          // Roll through all recommendations for current user
+          const recommendations = data.recommendations.map(rec => {
+            return {
+              headline: rec.message, // Use the whole message
+              label: 'Learn more',
+              url: rec.url,
+              arm_id: rec.arm_id
+            };
+          });
+          let current = 0;
+          function showRec(idx) {
+            const rec = recommendations[idx];
+            const sourceIndicator = data.source === 'processed' ? ' ✨' : '';
+            recBox.innerHTML = `<span>${rec.headline}${sourceIndicator} <a href="${rec.url}" target="_blank" data-arm="${rec.arm_id}">${rec.label}</a></span>`;
+            recBox.setAttribute('aria-hidden', 'false');
+            // Add click handler for reward
+            const link = recBox.querySelector('a[data-arm]');
+            if (link) {
+              link.addEventListener('click', function(e) {
+                sendReward(rec.arm_id);
+              });
+            }
+          }
+          showRec(current);
+          if (!recBox._carouselInterval) {
+            recBox._carouselInterval = setInterval(() => {
+              recBox.setAttribute('aria-hidden', 'true');
+              setTimeout(() => {
+                current = (current + 1) % recommendations.length;
+                showRec(current);
+              }, 500);
+            }, 4000); // Slightly faster carousel - 4 seconds instead of 5
+          }
+        } else {
+          recBox.textContent = 'No recommendations available.';
         }
       }
 

@@ -69,6 +69,14 @@ class ThompsonBandit:
             backup_path = os.path.join(self.BACKUP_DIR, self.BACKUP_FILE)
             if not os.path.exists(backup_path):
                 print(f"\nNo bandit state file found at: {backup_path}")
+                print("Starting with fresh bandit state:")
+                print("\nInitial arm values:")
+                for aid, arm in self.arms.items():
+                    print(f"\n{aid}:")
+                    print(f"  α (alpha): {arm.alpha:.2f}")
+                    print(f"  β (beta): {arm.beta:.2f}")
+                    print(f"  Total Reward: {arm.total_reward}")
+                    print(f"  Number of Pulls: {arm.num_pulls}")
                 return False
                 
             with open(backup_path, 'r') as f:
@@ -78,8 +86,10 @@ class ThompsonBandit:
             print(f"State timestamp: {state_data.get('timestamp', 'Not recorded')}")
             print("\nLoaded arm values:")
             
+            loaded_arms = set()
             for aid, arm_data in state_data["arms"].items():
                 if aid in self.arms:
+                    loaded_arms.add(aid)
                     self.arms[aid].alpha = arm_data["alpha"]
                     self.arms[aid].beta = arm_data["beta"]
                     self.arms[aid].total_reward = arm_data["total_reward"]
@@ -92,6 +102,18 @@ class ThompsonBandit:
                     if arm_data['num_pulls'] > 0:
                         avg_reward = arm_data['total_reward'] / arm_data['num_pulls']
                         print(f"  Average Reward: {avg_reward:.3f}")
+            
+            # Print any new arms that weren't in the saved state
+            new_arms = set(self.arms.keys()) - loaded_arms
+            if new_arms:
+                print("\nNew arms (not in saved state):")
+                for aid in sorted(new_arms):
+                    arm = self.arms[aid]
+                    print(f"\n{aid}:")
+                    print(f"  α (alpha): {arm.alpha:.2f}")
+                    print(f"  β (beta): {arm.beta:.2f}")
+                    print(f"  Total Reward: {arm.total_reward}")
+                    print(f"  Number of Pulls: {arm.num_pulls}")
             
             print("\nBandit state loaded successfully!")
             return True

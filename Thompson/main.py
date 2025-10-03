@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel
 from bandit import ThompsonBandit
 from bedrock_access import generate_meassages, get_embeddings_batch
 from ranker import rank_by_cosine
+import asyncio
+import threading
+import time
 
 
 app = FastAPI(title="Thompson-Bandit",default_response_class=ORJSONResponse,  version="0.1.0")
@@ -18,6 +21,9 @@ app.add_middleware(
     allow_credentials=False,    # keep False if using "*"
 )
 
+# Global cache for processed messages and processing status
+message_cache = {}
+processing_status = {}  # user_id -> {"status": "processing"/"complete", "timestamp": time}
 
 
 # --- config -------------------------------------------------------------
@@ -164,7 +170,7 @@ ARM_DESCRIPTIONS = {
     
     # Early Explorer (10 arms)
     "early_explorer_1": {
-        "message": "Turn your dreams into reality with <link>homeownership</link>",
+        "message": "Imagine your own space - explore home <link>homeownership</link>",
         "url": "https://www.chase.com/personal/mortgage/education"
     },
     "early_explorer_2": {
@@ -176,7 +182,7 @@ ARM_DESCRIPTIONS = {
         "url": "https://www.chase.com/personal/mortgage/education"
     },
     "early_explorer_4": {
-        "message": "Stop paying rent and start building wealth through <link>home ownership</link>",
+        "message": "Start building wealth through <link>home ownership</link>",
         "url": "https://www.chase.com/personal/mortgage/education"
     },
     "early_explorer_5": {
@@ -204,7 +210,133 @@ ARM_DESCRIPTIONS = {
         "url": "https://www.chase.com/personal/mortgage/education"
     }
 }
+
+# Default messages (original ARM_DESCRIPTIONS that will be shown immediately)
+DEFAULT_ARM_DESCRIPTIONS = ARM_DESCRIPTIONS.copy()
+
 bandit = ThompsonBandit(ARM_NAMES)
+
+def process_bedrock_messages_background(user_id: str):
+    """Background function to process Bedrock messages for a user."""
+    global message_cache, processing_status
+    
+    try:
+        print(f"Starting background processing for {user_id}", flush=True)
+        processing_status[user_id] = {"status": "processing", "timestamp": time.time()}
+        
+        user_profile_map = {
+            "user1": {
+                "cluster_type": "Purchase Mortgage",
+                "reasoning": "Recommended based onL high purchase page engagement(1.00), strong buying power (%511,045)" 
+            },
+            "user2": {
+                "cluster_type": "Refinance",
+                "reasoning": "Recommended based on existing mortgage indicates refinance potential " 
+            },
+            "user3": {
+                "cluster_type": "HELOC",
+                "reasoning": "Recommended based on home equity available for borrowing" 
+            },
+            "user4": {
+                "cluster_type": "Early Explorer",
+                "reasoning": "Recommended based on interest in exploring homeownership opportunities" 
+            }
+        }
+
+        profile = user_profile_map.get(user_id, {
+            "cluster_type": "Purchase Mortgage",
+            "reasoning": "Recommended based onL high purchase page engagement(1.00), strong buying power (%511,045)" 
+        })
+
+        user_data = {
+            "user_login": [
+                {
+                    "cluster_type": profile["cluster_type"],
+                    "reasoning": profile["reasoning"]
+                }
+            ]
+        }
+
+        cluster_type = user_data["user_login"][0]["cluster_type"]
+        if cluster_type == "HELOC":
+            cluster_type = "Home Equity Line of Credit" 
+        reasoning = user_data["user_login"][0]["reasoning"]
+
+        user_message = (
+            f"This message is for user that is interested in {cluster_type}. "
+            f"Reasoning: {reasoning}. "
+        )
+        
+        print(f"### USER_MESSAGE for {user_id} in background:", user_message, flush=True)
+
+        # Call Bedrock API
+        bedrock_messages_list = generate_meassages(user_data, user_message)
+        print(f"Bedrock Messages List for {user_id}:")
+        for i, message in enumerate(bedrock_messages_list, 1):
+            print(f'{i:2d}. {message}', flush=True)
+
+        # Get embedding vector list
+        text_list = [user_message] + bedrock_messages_list
+        vecs = get_embeddings_batch(text_list, model_id="amazon.titan-embed-text-v1", dimensions=1536)
+
+        # Rank the messages
+        ref_vec = vecs[0]
+        cand_vecs = vecs[1:]
+        ranked_bedrock_messages_list = rank_by_cosine(ref_vec, cand_vecs, bedrock_messages_list)
+
+        print(f"=== RANKED MESSAGES FOR {user_id} ===")
+        for i, item in enumerate(ranked_bedrock_messages_list, 1):
+            print(f"{i:2d}. Similarity: {item['cosine_similarity']:.4f} | Message: {item['message']}")
+        print("=" * 60)
+
+        cluster_headline_map = {
+            "Purchase Mortgage": ["purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5", 
+                                 "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],
+            "Refinance": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
+                          "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],
+            "Home Equity Line of Credit": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
+                      "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"],
+            "Early Explorer": ["early_explorer_1", "early_explorer_2", "early_explorer_3", "early_explorer_4", "early_explorer_5",
+                              "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"]
+        }
+
+        # Create processed messages for this user
+        processed_messages = {}
+        if cluster_type in cluster_headline_map and len(ranked_bedrock_messages_list) >= 10:
+            print(f"DEBUG: Assigning background messages to {len(cluster_headline_map[cluster_type])} arms for {user_id}")
+            for i, headline_id in enumerate(cluster_headline_map[cluster_type]):
+                similarity_score = ranked_bedrock_messages_list[i]["cosine_similarity"]
+                message = ranked_bedrock_messages_list[i]["message"]
+                processed_messages[headline_id] = {
+                    "message": message,
+                    "url": DEFAULT_ARM_DESCRIPTIONS[headline_id]["url"]
+                }
+            print(f"DEBUG: Background message assignment completed for {user_id}!")
+        else:
+            print(f"DEBUG: Background condition failed for {user_id} - keeping default messages!")
+            # Use default messages for this user
+            user_interest_map = {
+                "user1": ["purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5", 
+                          "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],
+                "user2": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
+                          "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],
+                "user3": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
+                          "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"],
+                "user4": ["early_explorer_1", "early_explorer_2", "early_explorer_3", "early_explorer_4", "early_explorer_5",
+                          "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"]
+            }
+            arm_ids = user_interest_map.get(user_id, [])
+            for arm_id in arm_ids:
+                processed_messages[arm_id] = DEFAULT_ARM_DESCRIPTIONS[arm_id].copy()
+
+        # Store in cache
+        message_cache[user_id] = processed_messages
+        processing_status[user_id] = {"status": "complete", "timestamp": time.time()}
+        print(f"Background processing complete for {user_id}", flush=True)
+        
+    except Exception as e:
+        print(f"Error in background processing for {user_id}: {e}", flush=True)
+        processing_status[user_id] = {"status": "error", "timestamp": time.time(), "error": str(e)}
 # ------------------------------------------------------------------------
 
 class ChoiceOut(BaseModel):
@@ -238,152 +370,89 @@ def state():
     """Debug: current posterior parameters."""
     return bandit.state()
 
-@app.get("/api/recommendation")
-def get_recommendation(user_id: str):
-    """Get recommendations for a specific user."""
-    recommendations = []
-    # Add call to Bedrock to generate more messages
-    from bedrock_access import generate_meassages
-
-    user_profile_map = {
-        "user1": {
-            "cluster_type": "Purchase Mortgage",
-            "reasoning": "Recommended based onL high purchase page engagement(1.00), strong buying power (%511,045)" 
-        },
-        "user2": {
-            "cluster_type": "Refinance",
-            "reasoning": "Recommended based on existing mortgage indicates refinance potential " 
-        },
-        "user3": {
-            "cluster_type": "HELOC",
-            "reasoning": "Recommended based on home equity available for borrowing" 
-        },
-        "user4": {
-            "cluster_type": "Early Explorer",
-            "reasoning": "Recommended based on interest in exploring homeownership opportunities" 
-        }
-    }
-
-    profile = user_profile_map.get(user_id, {
-        "cluster_type": "Purchase Mortgage",
-        "reasoning": "Recommended based onL high purchase page engagement(1.00), strong buying power (%511,045)" 
-    }) # if user_id is not found, then default to user1 profile
-
-    user_data = {
-        "user_login": [
-            {
-                "cluster_type": profile["cluster_type"],
-                "reasoning": profile["reasoning"]
-            }
-        ]
-    }
-
-    cluster_type = user_data["user_login"][0]["cluster_type"]
-    if cluster_type == "HELOC":
-        cluster_type = "Home Equity Line of Credit" 
-    reasoning = user_data["user_login"][0]["reasoning"]
-
-    # generate user_data
-
-    # import uuid
-    # unique_id = str(uuid.uuid4())[:8]
-    user_message = (
-        f"This message is for user that is interested in {cluster_type}. "
-        f"Reasoning: {reasoning}. "
-        #f"Request ID: {unique_id} - Generate fresh, unique messages."
-    )
+@app.get("/api/recommendation/immediate")
+def get_immediate_recommendation(user_id: str, background_tasks: BackgroundTasks):
+    """Get immediate default recommendations while starting background processing."""
+    global message_cache, processing_status
     
-    print("### USER_MESSAGE and TYPE in main.py:", user_message, type(user_message))
-
-    bedrock_messages_list = generate_meassages(user_data, user_message)
-    print("Bedrock Messages List from main.py:")
-    for i, message in enumerate(bedrock_messages_list, 1):
-        print(f'{i:2d}. {message}', flush=True)
-    print()
-
-    # Get embedding vector list
-    text_list = [user_message] + bedrock_messages_list # First item is user_message, rest are generated message
-    vecs = get_embeddings_batch(text_list, model_id="amazon.titan-embed-text-v1", dimensions=1536)
-
-    print(f"##### Batch count: {len(vecs)}")
-    print(f"##### Batch lens: {[len(v) for v in vecs]}")
-
+    # Always start fresh background processing (clear any existing cache)
+    if user_id in message_cache:
+        del message_cache[user_id]
+    if user_id in processing_status:
+        del processing_status[user_id]
     
-    # Rank the message based on their similarity with user_message 
-    # Cosine similarity ranking: use the first vector (concatenated prompt) as reference
-    ref_vec = vecs[0]
-    cand_vecs = vecs[1:]
-    ranked_bedrock_messages_list = rank_by_cosine(ref_vec, cand_vecs, bedrock_messages_list)
-
-    # Print all ranked messages with their cosine similarity scores in descending order
-    print("=== RANKED MESSAGES BY COSINE SIMILARITY (Descending Order) ===")
-    for i, item in enumerate(ranked_bedrock_messages_list, 1):
-        print(f"{i:2d}. Similarity: {item['cosine_similarity']:.4f} | Message: {item['message']}")
-    print("=" * 60)
-
-
-
-
-    cluster_headline_map = {
-        "Purchase Mortgage": ["purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5", 
-                             "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],
-        "Refinance": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
-                      "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],
-        "Home Equity Line of Credit": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
-                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"],
-        "Early Explorer": ["early_explorer_1", "early_explorer_2", "early_explorer_3", "early_explorer_4", "early_explorer_5",
-                          "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"]
-    }
-
-    # Assign generated messages to the correct headlines
-    print(f"DEBUG: cluster_type = '{cluster_type}'")
-    print(f"DEBUG: len(ranked_bedrock_messages_list) = {len(ranked_bedrock_messages_list)}")
-    print(f"DEBUG: cluster_type in cluster_headline_map = {cluster_type in cluster_headline_map}")
+    # Always start new background processing
+    background_tasks.add_task(process_bedrock_messages_background, user_id)
+    print(f"Started fresh background processing for {user_id}", flush=True)
     
-    if cluster_type in cluster_headline_map and len(ranked_bedrock_messages_list) >= 10:
-        print(f"DEBUG: Assigning messages to {len(cluster_headline_map[cluster_type])} arms")
-        for i, headline_id in enumerate(cluster_headline_map[cluster_type]):
-            similarity_score = ranked_bedrock_messages_list[i]["cosine_similarity"]
-            message = ranked_bedrock_messages_list[i]["message"]
-            print(f"DEBUG: Assigning message {i+1} to {headline_id} - Similarity to user description: {similarity_score:.4f}, Message content: {message[:50]}...")
-
-            # Use the ranked message instead of the original order
-            ARM_DESCRIPTIONS[headline_id]["message"] = message
-        print("DEBUG: Message assignment completed!")
-    else:
-        print("DEBUG: Condition failed - using hardcoded messages!")
-
-    # Map user_id to interest
+    # Return default messages immediately
     user_interest_map = {
         "user1": ["purchase_1", "purchase_2", "purchase_3", "purchase_4", "purchase_5", 
-                  "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],  # Purchase
+                  "purchase_6", "purchase_7", "purchase_8", "purchase_9", "purchase_10"],
         "user2": ["refinance_1", "refinance_2", "refinance_3", "refinance_4", "refinance_5",
-                  "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],  # Refinance
+                  "refinance_6", "refinance_7", "refinance_8", "refinance_9", "refinance_10"],
         "user3": ["home_equity_1", "home_equity_2", "home_equity_3", "home_equity_4", "home_equity_5",
-                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"],   # Home Equity
+                  "home_equity_6", "home_equity_7", "home_equity_8", "home_equity_9", "home_equity_10"],
         "user4": ["early_explorer_1", "early_explorer_2", "early_explorer_3", "early_explorer_4", "early_explorer_5",
-                  "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"]   # Early Explorer
+                  "early_explorer_6", "early_explorer_7", "early_explorer_8", "early_explorer_9", "early_explorer_10"]
     }
+    
     arm_ids = user_interest_map.get(user_id, [bandit.choose()])
+    recommendations = []
     
     for arm_id in arm_ids:
-        description = ARM_DESCRIPTIONS[arm_id]
+        description = DEFAULT_ARM_DESCRIPTIONS[arm_id]
         arm_state = bandit.state()[arm_id]
-        print(f"\nArm Selected: {arm_id}", flush=True)
-        print(f"Current Parameters - Alpha: {arm_state['alpha']:.2f}, Beta: {arm_state['beta']:.2f}", flush=True)
-        if arm_state['num_pulls'] > 0:
-            print(f"Average Reward: {arm_state['average_reward']:.3f} (Total Pulls: {arm_state['num_pulls']})", flush=True)
         recommendations.append({
             "arm_id": arm_id,
             "message": description["message"],
             "url": description["url"]
         })
 
-    print(f"\nFinal Recommendations for {user_id}:", recommendations, flush=True)
-    for recommendation in recommendations:
-        print(f"- {recommendation['arm_id']}: {recommendation['message']} ({recommendation['url']})", flush=True)
-
     return {
         "user_id": user_id,
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "source": "default",
+        "processing_status": {"status": "processing", "timestamp": time.time()}
     }
+
+@app.get("/api/recommendation/status")
+def get_processing_status(user_id: str):
+    """Check if background processing is complete for a user."""
+    return {
+        "user_id": user_id,
+        "status": processing_status.get(user_id, {"status": "not_started"})
+    }
+
+@app.get("/api/recommendation/processed")
+def get_processed_recommendation(user_id: str):
+    """Get processed recommendations if available, otherwise default ones."""
+    global message_cache
+    
+    # Check if processed messages are available
+    if user_id in message_cache:
+        processed_messages = message_cache[user_id]
+        recommendations = []
+        
+        for arm_id, description in processed_messages.items():
+            arm_state = bandit.state()[arm_id]
+            recommendations.append({
+                "arm_id": arm_id,
+                "message": description["message"],
+                "url": description["url"]
+            })
+        
+        return {
+            "user_id": user_id,
+            "recommendations": recommendations,
+            "source": "processed",
+            "processing_status": processing_status.get(user_id, {"status": "unknown"})
+        }
+    else:
+        # Fall back to default recommendations
+        return get_immediate_recommendation(user_id, BackgroundTasks())
+
+@app.get("/api/recommendation")
+def get_recommendation(user_id: str):
+    """Legacy endpoint - now redirects to processed recommendations."""
+    return get_processed_recommendation(user_id)
